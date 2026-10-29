@@ -1,7 +1,6 @@
 provider "aws" {
   region = "ap-south-1"
 }
-
 resource "aws_vpc" "pankaj_vpc" {
   cidr_block = "10.0.0.0/16"
 
@@ -9,27 +8,22 @@ resource "aws_vpc" "pankaj_vpc" {
     Name = "pankaj-vpc"
   }
 }
-
 resource "aws_subnet" "pankaj_subnet" {
   count = 2
   vpc_id                  = aws_vpc.pankaj_vpc.id
   cidr_block              = cidrsubnet(aws_vpc.pankaj_vpc.cidr_block, 8, count.index)
   availability_zone       = element(["ap-south-1a", "ap-south-1b"], count.index)
   map_public_ip_on_launch = true
-
   tags = {
     Name = "pankaj-subnet-${count.index}"
   }
 }
-
 resource "aws_internet_gateway" "pankaj_igw" {
   vpc_id = aws_vpc.pankaj_vpc.id
-
   tags = {
     Name = "pankaj-igw"
   }
 }
-
 resource "aws_route_table" "pankaj_route_table" {
   vpc_id = aws_vpc.pankaj_vpc.id
 
@@ -65,7 +59,7 @@ resource "aws_security_group" "pankaj_cluster_sg" {
 }
 
 resource "aws_security_group" "pankaj_node_sg" {
-  vpc_id = aws_vpc.devopsshack_vpc.id
+  vpc_id = aws_vpc.pankaj_vpc.id
 
   ingress {
     from_port   = 0
@@ -113,9 +107,9 @@ resource "aws_eks_node_group" "pankaj" {
   subnet_ids      = aws_subnet.pankaj_subnet[*].id
 
   scaling_config {
-    desired_size = 3
-    max_size     = 3
-    min_size     = 3
+    desired_size = 2
+    max_size     = 2
+    min_size     = 2
   }
 
   instance_types = ["t2.medium"]
@@ -125,7 +119,6 @@ resource "aws_eks_node_group" "pankaj" {
     source_security_group_ids = [aws_security_group.pankaj_node_sg.id]
   }
 }
-
 resource "aws_iam_role" "pankaj_cluster_role" {
   name = "pankaj-cluster-role"
 
@@ -144,15 +137,12 @@ resource "aws_iam_role" "pankaj_cluster_role" {
 }
 EOF
 }
-
 resource "aws_iam_role_policy_attachment" "pankaj_cluster_role_policy" {
   role       = aws_iam_role.pankaj_cluster_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
-
 resource "aws_iam_role" "pankaj_node_group_role" {
   name = "pankaj-node-group-role"
-
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -168,22 +158,18 @@ resource "aws_iam_role" "pankaj_node_group_role" {
 }
 EOF
 }
-
 resource "aws_iam_role_policy_attachment" "pankaj_node_group_role_policy" {
   role       = aws_iam_role.pankaj_node_group_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
-
 resource "aws_iam_role_policy_attachment" "pankaj_node_group_cni_policy" {
   role       = aws_iam_role.pankaj_node_group_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
-
 resource "aws_iam_role_policy_attachment" "pankaj_node_group_registry_policy" {
   role       = aws_iam_role.pankaj_node_group_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
-
 resource "aws_iam_role_policy_attachment" "pankaj_node_group_ebs_policy" {
   role       = aws_iam_role.pankaj_node_group_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
