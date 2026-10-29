@@ -3,7 +3,7 @@ provider "aws" {
 }
 resource "aws_vpc" "pankaj_vpc" {
   cidr_block = "10.0.0.0/16"
-  tags {
+  tags = {
     Name = "pankaj-vpc"
   }
 }
@@ -19,7 +19,7 @@ resource "aws_subnet" "pankaj_subnet" {
 }
 resource "aws_internet_gateway" "pankaj_igw" {
   vpc_id = aws_vpc.pankaj_vpc.id
-  tags {
+  tags = {
     Name = "pankaj-igw"
   }
 }
@@ -29,7 +29,7 @@ resource "aws_route_table" "pankaj_route_table" {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.pankaj_igw.id
   }
-  tags {
+  tags = {
     Name = "pankaj-route-table"
   }
 }
@@ -46,7 +46,7 @@ resource "aws_security_group" "pankaj_cluster_sg" {
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags {
+  tags = {
     Name = "pankaj-cluster-sg"
   }
 }
@@ -64,7 +64,7 @@ resource "aws_security_group" "pankaj_node_sg" {
     protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags {
+  tags = {
     Name = "pankaj-node-sg"
   }
 }
