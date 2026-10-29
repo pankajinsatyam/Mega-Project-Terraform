@@ -3,16 +3,15 @@ provider "aws" {
 }
 resource "aws_vpc" "pankaj_vpc" {
   cidr_block = "10.0.0.0/16"
-
-  tags = {
+  tags {
     Name = "pankaj-vpc"
   }
 }
 resource "aws_subnet" "pankaj_subnet" {
   count = 2
-  vpc_id                  = aws_vpc.pankaj_vpc.id
-  cidr_block              = cidrsubnet(aws_vpc.pankaj_vpc.cidr_block, 8, count.index)
-  availability_zone       = element(["ap-south-1a", "ap-south-1b"], count.index)
+  vpc_id = aws_vpc.pankaj_vpc.id
+  cidr_block = cidrsubnet(aws_vpc.pankaj_vpc.cidr_block, 8, count.index)
+  availability_zone = element(["ap-south-1a", "ap-south-1b"], count.index)
   map_public_ip_on_launch = true
   tags = {
     Name = "pankaj-subnet-${count.index}"
@@ -20,100 +19,80 @@ resource "aws_subnet" "pankaj_subnet" {
 }
 resource "aws_internet_gateway" "pankaj_igw" {
   vpc_id = aws_vpc.pankaj_vpc.id
-  tags = {
+  tags {
     Name = "pankaj-igw"
   }
 }
 resource "aws_route_table" "pankaj_route_table" {
   vpc_id = aws_vpc.pankaj_vpc.id
-
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.pankaj_igw.id
   }
-
-  tags = {
+  tags {
     Name = "pankaj-route-table"
   }
 }
-
 resource "aws_route_table_association" "pankaj_association" {
-  count          = 2
-  subnet_id      = aws_subnet.pankaj_subnet[count.index].id
+  count = 2
+  subnet_id = aws_subnet.pankaj_subnet[count.index].id
   route_table_id = aws_route_table.pankaj_route_table.id
 }
-
 resource "aws_security_group" "pankaj_cluster_sg" {
   vpc_id = aws_vpc.pankaj_vpc.id
-
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
+  tags {
     Name = "pankaj-cluster-sg"
   }
 }
-
 resource "aws_security_group" "pankaj_node_sg" {
   vpc_id = aws_vpc.pankaj_vpc.id
-
   ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
-  tags = {
+  tags {
     Name = "pankaj-node-sg"
   }
 }
-
 resource "aws_eks_cluster" "pankaj" {
-  name     = "pankaj-cluster"
+  name = "pankaj-cluster"
   role_arn = aws_iam_role.pankaj_cluster_role.arn
-
   vpc_config {
-    subnet_ids         = aws_subnet.pankaj_subnet[*].id
+    subnet_ids = aws_subnet.pankaj_subnet[*].id
     security_group_ids = [aws_security_group.pankaj_cluster_sg.id]
   }
 }
-
-
 resource "aws_eks_addon" "ebs_csi_driver" {
-  cluster_name    = aws_eks_cluster.pankaj.name
-  addon_name      = "aws-ebs-csi-driver"
-  
+  cluster_name = aws_eks_cluster.pankaj.name
+  addon_name = "aws-ebs-csi-driver"
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 }
-
-
 resource "aws_eks_node_group" "pankaj" {
-  cluster_name    = aws_eks_cluster.pankaj.name
+  cluster_name = aws_eks_cluster.pankaj.name
   node_group_name = "pankaj-node-group"
-  node_role_arn   = aws_iam_role.pankaj_node_group_role.arn
-  subnet_ids      = aws_subnet.pankaj_subnet[*].id
-
+  node_role_arn = aws_iam_role.pankaj_node_group_role.arn
+  subnet_ids = aws_subnet.pankaj_subnet[*].id
   scaling_config {
     desired_size = 2
-    max_size     = 2
-    min_size     = 2
+    max_size = 2
+    min_size = 2
   }
-
   instance_types = ["t2.medium"]
-
   remote_access {
     ec2_ssh_key = var.ssh_key_name
     source_security_group_ids = [aws_security_group.pankaj_node_sg.id]
@@ -121,8 +100,7 @@ resource "aws_eks_node_group" "pankaj" {
 }
 resource "aws_iam_role" "pankaj_cluster_role" {
   name = "pankaj-cluster-role"
-
-  assume_role_policy = <<EOF
+  assume_role_policy = <<EOT
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -135,15 +113,11 @@ resource "aws_iam_role" "pankaj_cluster_role" {
     }
   ]
 }
-EOF
-}
-resource "aws_iam_role_policy_attachment" "pankaj_cluster_role_policy" {
-  role       = aws_iam_role.pankaj_cluster_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  EOT
 }
 resource "aws_iam_role" "pankaj_node_group_role" {
   name = "pankaj-node-group-role"
-  assume_role_policy = <<EOF
+  assume_role_policy = <<EOT
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -156,21 +130,25 @@ resource "aws_iam_role" "pankaj_node_group_role" {
     }
   ]
 }
-EOF
+  EOT
+}
+resource "aws_iam_role_policy_attachment" "pankaj_cluster_role_policy" {
+  role = aws_iam_role.pankaj_cluster_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 resource "aws_iam_role_policy_attachment" "pankaj_node_group_role_policy" {
-  role       = aws_iam_role.pankaj_node_group_role.name
+  role = aws_iam_role.pankaj_node_group_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
 resource "aws_iam_role_policy_attachment" "pankaj_node_group_cni_policy" {
-  role       = aws_iam_role.pankaj_node_group_role.name
+  role = aws_iam_role.pankaj_node_group_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 resource "aws_iam_role_policy_attachment" "pankaj_node_group_registry_policy" {
-  role       = aws_iam_role.pankaj_node_group_role.name
+  role = aws_iam_role.pankaj_node_group_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 resource "aws_iam_role_policy_attachment" "pankaj_node_group_ebs_policy" {
-  role       = aws_iam_role.pankaj_node_group_role.name
+  role = aws_iam_role.pankaj_node_group_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
